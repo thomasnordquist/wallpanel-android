@@ -40,6 +40,7 @@ class MotionDetector private constructor(private val minLuma: Int, private val m
         super.receiveFrame(frame)
 
         // Drop framerate to 7,5 fps to compare with JS implementation. The framerate is the time-basis for the filter
+        // @Todo: 
         frameCounter += 1
 
         if (frameCounter % 2 === 0) return
