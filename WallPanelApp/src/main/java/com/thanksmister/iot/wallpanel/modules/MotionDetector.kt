@@ -22,13 +22,10 @@ import com.google.android.gms.vision.Detector
 import com.google.android.gms.vision.Frame
 import com.thanksmister.iot.wallpanel.modules.Motion.Companion.MOTION_DETECTED
 import com.thanksmister.iot.wallpanel.modules.Motion.Companion.MOTION_NOT_DETECTED
-import com.thanksmister.iot.wallpanel.modules.Motion.Companion.MOTION_TOO_DARK
 
 import timber.log.Timber
 import java.nio.IntBuffer
 import android.graphics.*
-import java.io.ByteArrayOutputStream
-import java.nio.ByteBuffer
 
 /**
  * Created by Michael Ritchie on 7/6/18.
@@ -39,9 +36,7 @@ class MotionDetector private constructor(private val minLuma: Int, private val m
     private var frameCounter = 0
 
     private fun frameToBitmap(frame: Frame): Bitmap {
-        val pixels = probeFrame(frame)
-        //val bitmap = byteBufferToBitmap(pixels, frame.metadata.width/4, frame.metadata.height/4)
-
+        val pixels = frameToSmallerArgbImage(frame)
         val bitmap = Bitmap.createBitmap(frame.metadata.width/16, frame.metadata.height/8, Bitmap.Config.ARGB_8888)
         bitmap.copyPixelsFromBuffer(pixels)
 
@@ -54,9 +49,15 @@ class MotionDetector private constructor(private val minLuma: Int, private val m
         return 0xFF shl 24 or (v shl 16) or (v and 0xff shl 8) or (v and 0xff)
     }
 
-    private fun probeFrame(frame: Frame): IntBuffer {
+    /**
+     * Probing equidistant points of the image to reduce computation time.
+     *
+     * @return IntBuffer ordered subset of pixels
+     */
+    private fun frameToSmallerArgbImage(frame: Frame): IntBuffer {
         val skipPixelsX = 16
         val skipLinesY = 7
+
         val width = frame.metadata.width
         val height = frame.metadata.height
         val grayscaleImageDate = frame.grayscaleImageData
@@ -96,15 +97,14 @@ class MotionDetector private constructor(private val minLuma: Int, private val m
     }
 
     override fun receiveFrame(frame: Frame?) {
-        frameCounter += 1
-        // Drop framerate to 7,5 fps to compare with JS implementation. The framerate is the time-basis for the filter
-        if (frameCounter % 2 === 0) return
-
-        val startTime = System.currentTimeMillis()
-
-        // println("Did receive a frame")
         super.receiveFrame(frame)
+
+        // Drop framerate to 7,5 fps to compare with JS implementation. The framerate is the time-basis for the filter
+        frameCounter += 1
+
+        if (frameCounter % 2 === 0) return
         if (frame === null) return
+
         try {
             val bitmap = this.frameToBitmap(frame)
             val scaledFrame = Frame
@@ -115,7 +115,6 @@ class MotionDetector private constructor(private val minLuma: Int, private val m
 
             val imgData = scaledFrame.grayscaleImageData.array().map { it.toInt() and 0xFF }.toIntArray()
             this.imageComparator.addImage(imgData)
-            // println("Receive frame took" + (System.currentTimeMillis() - startTime) + "ms")
         } catch (e: java.lang.Exception) {
             println(e)
         }
@@ -178,7 +177,6 @@ class ContinousMotionDetection(imageComparator: ImageCompare) {
         }
 
         this.updateMovementCounter(changedSegmentCount)
-        // println(this.movementCounter)
         val organicMovementDetected = ((this.movementCounter-1) * changedSegmentCount) > 10
         if (organicMovementDetected) {
             return true
