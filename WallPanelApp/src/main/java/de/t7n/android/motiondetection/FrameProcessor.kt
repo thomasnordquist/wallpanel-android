@@ -3,14 +3,16 @@ package de.t7n.android.motiondetection
 import android.graphics.Bitmap
 import com.google.android.gms.vision.Frame
 import java.nio.ByteBuffer
-import java.nio.IntBuffer
 
 class FrameProcessor {
     companion object {
         fun frameToBitmap(frame: Frame): Bitmap {
-            var arr = frame.grayscaleImageData.array()
-            var dest = ByteArray(640*480)
-            System.arraycopy(arr, 0, dest, 0, 640*480)
+            var source = frame.grayscaleImageData.array().map { it + 127 }.toIntArray()
+            val pixelCount = frame.metadata.width * frame.metadata.height
+            var dest = ByteArray(pixelCount)
+
+            // Remove additional color data that may be at the end of the grayscale pixels
+            System.arraycopy(source, 0, dest, 0, pixelCount)
 
             val bitmap = Bitmap.createBitmap(frame.metadata.width, frame.metadata.height, Bitmap.Config.ALPHA_8)
             bitmap.copyPixelsFromBuffer(ByteBuffer.wrap(dest))

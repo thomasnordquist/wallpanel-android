@@ -16,6 +16,7 @@
 
 package com.thanksmister.iot.wallpanel.modules
 
+import android.graphics.Bitmap
 import android.util.SparseArray
 
 import com.google.android.gms.vision.Detector
@@ -29,6 +30,7 @@ import de.t7n.android.motiondetection.ContinousMotionDetection
 import de.t7n.android.motiondetection.FrameProcessor
 import de.t7n.android.motiondetection.ImageCompare
 import java.nio.ByteBuffer
+import java.nio.IntBuffer
 
 /**
  * Created by Michael Ritchie on 7/6/18.
@@ -53,12 +55,24 @@ class MotionDetector private constructor(private val minLuma: Int, private val m
 
             val grayscaleData = ByteBuffer.wrap(ByteArray(64))
             bitmap.copyPixelsToBuffer(grayscaleData)
-
+            byteBufferToBitmap(grayscaleData, 8, 8)
             val imgData = grayscaleData.array().map { it.toInt() and 0xFF }.toIntArray()
             this.imageComparator.addImage(imgData)
         } catch (e: java.lang.Exception) {
             println(e)
         }
+    }
+
+    fun byteBufferToBitmap(buffer: ByteBuffer, width: Int, height: Int): Bitmap {
+        val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+        val pixels = buffer.array().map {
+            val intensity = it.toInt() and 0xFF
+            0xFF shl 24 or intensity shl 16 or intensity shl 8 or intensity
+        }.toIntArray()
+
+        bitmap.copyPixelsFromBuffer(IntBuffer.wrap(pixels))
+
+        return bitmap
     }
 
     override fun detect(frame: Frame?): SparseArray<Motion> {
