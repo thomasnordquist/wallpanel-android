@@ -13,7 +13,7 @@ class ImageCompare(pixelCount: Int) {
 
         this.currentDeltaMatrix = this.calcDeltaValues()
         val threshold = this.currentThreshold()
-        this.averageThresholdCollection.push(threshold)
+        this.averageThresholdCollection.push(threshold.toLong())
     }
 
     fun averageThreshold(): Double {

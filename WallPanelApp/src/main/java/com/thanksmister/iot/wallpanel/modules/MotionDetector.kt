@@ -39,40 +39,37 @@ class MotionDetector private constructor(private val minLuma: Int, private val m
     private val imageComparator = ImageCompare(64)
     private val continousMovementDetection = ContinousMotionDetection(this.imageComparator)
     private var frameCounter = 0
+    private var frameAverage = Average(30)
+    private var lastFrameReceived = System.currentTimeMillis()
 
     override fun receiveFrame(frame: Frame?) {
+        val start = System.currentTimeMillis()
+
         super.receiveFrame(frame)
 
         // Drop framerate to 7,5 fps to compare with JS implementation. The framerate is the time-basis for the filter
         // @Todo: 
         frameCounter += 1
+        frameAverage.push(System.currentTimeMillis() - this.lastFrameReceived)
+        this.lastFrameReceived = System.currentTimeMillis()
 
-        if (frameCounter % 2 === 0) return
+        if (frameAverage.avg() < 140 && frameCounter % 2 == 0) return
         if (frame === null) return
 
         try {
-            val bitmap = FrameProcessor.frameToBitmap(frame)
+            val bitmap = FrameProcessor.scaledBitmap(frame)
 
-            val grayscaleData = ByteBuffer.wrap(ByteArray(64))
+            val grayscaleData = IntBuffer.wrap(IntArray(64))
             bitmap.copyPixelsToBuffer(grayscaleData)
-            byteBufferToBitmap(grayscaleData, 8, 8)
-            val imgData = grayscaleData.array().map { it.toInt() and 0xFF }.toIntArray()
+
+            // Extract a channel channel from the scaled image
+            val imgData = grayscaleData.array().map { it and 0xFF }.toIntArray()
+
             this.imageComparator.addImage(imgData)
+            println("Took " + (System.currentTimeMillis()-start)+"ms, averageInterval: " + frameAverage.avg() + "ms")
         } catch (e: java.lang.Exception) {
             println(e)
         }
-    }
-
-    fun byteBufferToBitmap(buffer: ByteBuffer, width: Int, height: Int): Bitmap {
-        val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
-        val pixels = buffer.array().map {
-            val intensity = it.toInt() and 0xFF
-            0xFF shl 24 or intensity shl 16 or intensity shl 8 or intensity
-        }.toIntArray()
-
-        bitmap.copyPixelsFromBuffer(IntBuffer.wrap(pixels))
-
-        return bitmap
     }
 
     override fun detect(frame: Frame?): SparseArray<Motion> {
