@@ -22,11 +22,13 @@ import com.google.android.gms.vision.Detector
 import com.google.android.gms.vision.Frame
 import com.thanksmister.iot.wallpanel.modules.Motion.Companion.MOTION_DETECTED
 import com.thanksmister.iot.wallpanel.modules.Motion.Companion.MOTION_NOT_DETECTED
+import de.t7n.android.motiondetection.Average
 
 import timber.log.Timber
 import de.t7n.android.motiondetection.ContinousMotionDetection
 import de.t7n.android.motiondetection.FrameProcessor
 import de.t7n.android.motiondetection.ImageCompare
+import java.nio.ByteBuffer
 
 /**
  * Created by Michael Ritchie on 7/6/18.
@@ -48,13 +50,11 @@ class MotionDetector private constructor(private val minLuma: Int, private val m
 
         try {
             val bitmap = FrameProcessor.frameToBitmap(frame)
-            val scaledFrame = Frame
-                .Builder()
-                .setBitmap(bitmap)
-                .setRotation(frame.metadata.rotation)
-                .build()
 
-            val imgData = scaledFrame.grayscaleImageData.array().map { it.toInt() and 0xFF }.toIntArray()
+            val grayscaleData = ByteBuffer.wrap(ByteArray(64))
+            bitmap.copyPixelsToBuffer(grayscaleData)
+
+            val imgData = grayscaleData.array().map { it.toInt() and 0xFF }.toIntArray()
             this.imageComparator.addImage(imgData)
         } catch (e: java.lang.Exception) {
             println(e)

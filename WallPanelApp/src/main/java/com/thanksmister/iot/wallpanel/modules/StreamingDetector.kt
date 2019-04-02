@@ -20,8 +20,6 @@ import android.util.SparseArray
 
 import com.google.android.gms.vision.Detector
 import com.google.android.gms.vision.Frame
-import com.jjoe64.motiondetection.motiondetection.AggregateLumaMotionDetection
-import com.jjoe64.motiondetection.motiondetection.ImageProcessing
 import com.thanksmister.iot.wallpanel.modules.Motion.Companion.MOTION_DETECTED
 import com.thanksmister.iot.wallpanel.modules.Motion.Companion.MOTION_NOT_DETECTED
 import com.thanksmister.iot.wallpanel.modules.Motion.Companion.MOTION_TOO_DARK
